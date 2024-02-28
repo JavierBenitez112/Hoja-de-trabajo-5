@@ -12,6 +12,7 @@ class Computer:
     
 def Process(env, ram, cpu):
     # If ram is not enough, wait until it is enough
+    # TODO: Implemet the ram number for doing something when it reaches 0
     if ram.level == 0:
         pass  # Placeholder for the indented block
     else:
@@ -34,6 +35,7 @@ def Process(env, ram, cpu):
             #Release the cpu
             cpu.release(req)
 
+        # TODO: adapt this to the intructions   
         # Release the ram
         ram.put(ram_used)
         # After releasing the CPU
@@ -48,6 +50,8 @@ def Process(env, ram, cpu):
             # Go to Terminated state
             return
         
+
+
 def main():
     env = sp.Environment()
     computer = Computer(env)
