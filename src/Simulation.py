@@ -2,68 +2,71 @@ import simpy as sp
 import numpy as np
 
 # Global variables
-Ram_capacity = 100
-
-
+Times = {"ProcessNumber":[], "time":[]}
 class Computer:
-    def __init__(self, env) -> None:
-        self.ram = sp.Container(env, capacity=100, init=100)
-        self.cpu = sp.Resource(env, capacity=1)
-
+    def __init__(self, env, capacityProcesor, CapacityRam, InstructionsPerCycle) -> None:
+        self.ram = sp.Container(env, capacity=CapacityRam, init=CapacityRam)
+        self.cpu = sp.Resource(env, capacity=capacityProcesor)
+        self.InstructionsPerCycle = InstructionsPerCycle
 
 class Process:
-    def __init__(self, env, ram, cpu) -> None:
+    def __init__(self, env, pc) -> None:
         self.env = env
-        self.ram = ram
+        self.pc = pc
         self.ram_needed = np.random.randint(1, 10)
-        self.cpu = cpu
-        self.intruction_counter = np.random.randint(1, 10)
+        self.instruction_counter = np.random.randint(1, 10)
 
     def run(self):
-        ram_req = self.ram.get(self.ram_needed)
+        ram_req = self.pc.ram.get(self.ram_needed)
         yield ram_req
-        print(f"Ram needed: {self.ram_needed}")
 
-
-        def execute_instruction(cpu ,req):
+        def execute_instruction(req):
             for _ in range(3):
-
-                yield req
-                yield self.env.timeout(1)
-                self.intruction_counter -= 1
-                print(f"Instruction counter: {self.intruction_counter}")
-
-                if self.intruction_counter == 0:
-                    print("Process finished")
+                if self.instruction_counter <= 0:
                     break
-            print(f"Intructions left: {self.intruction_counter}")
-            cpu.release(req)
+                else:          
+                    yield req
+                    yield self.env.timeout(1)
+                    if self.instruction_counter > self.pc.InstructionsPerCycle:
+                        self.instruction_counter -= self.pc.InstructionsPerCycle
+                    else:
+                        self.instruction_counter = 0
 
-        with self.cpu.request() as req:
+                self.pc.cpu.release(req)
+                
+        start_time = self.env.now
+        with self.pc.cpu.request() as req:
             # Corre una intruccion por segundo, y un maximo de intrucciones de 3 en el procesador, despues de 3 se mira si se termian de hacer las intrucciones
             # o se interrumpe el proceso
-            while (self.intruction_counter > 0):
-                yield self.env.process(execute_instruction(self.cpu, req))
+            while (self.instruction_counter > 0):
+                yield self.env.process(execute_instruction(req))
 
                 Waiting_Number = np.random.randint(1, 2)
 
-                print(f"Waiting number: {Waiting_Number}")
                 if Waiting_Number == 1:
-                    # Interrupt the process and put it back in the queue
-                    print("Process interrupted")
-                    self.cpu.release(req)
+                    self.pc.cpu.release(req)
                     yield self.env.timeout(1)
                 else:
-                    yield self.env.process(execute_instruction(self.cpu, req))
-                    
-                
+                    yield self.env.process(execute_instruction(self.pc, req))
 
-def main():
+        self.pc.cpu.release(req)
+        end_time = self.env.now
+        self.pc.ram.put(self.ram_needed)
+        Times["ProcessNumber"].append(len(Times["ProcessNumber"])+1) 
+        Times["time"].append(end_time - start_time)
+
+def CreateProcesses(env, pc, Number_of_processes):
+    for _ in range(Number_of_processes):
+        Process(env, pc)
+        env.process(Process(env, pc).run())
+
+
+def main(Number_of_processes, Ram_Capacity, CPU_Capacity, InstructionsPerCycle):
+    Times["ProcessNumber"] = []
+    Times["time"] = []
     env = sp.Environment()
-    computer = Computer(env)
-    process = Process(env, computer.ram, computer.cpu)
-    env.process(process.run())
-    env.run(until=100)
+    pc = Computer(env, CPU_Capacity, Ram_Capacity, InstructionsPerCycle)
+    CreateProcesses(env, pc, Number_of_processes)
+    env.run()
+    return Times
 
-
-main()
