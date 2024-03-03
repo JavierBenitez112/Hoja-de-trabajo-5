@@ -32,14 +32,13 @@ def proceso(env, nombre, ram, cpu, CPU_INSTRUCCIONES, intervalo):
             
             if instrucciones_restantes <= 0:
                 break
-
     # Determinar el siguiente estado
     estado_siguiente = "Terminated"
     if random.randint(1, 21) == 1:
         estado_siguiente = "Waiting"
     elif random.randint(1, 21) == 2:
         estado_siguiente = "Ready"
-    
+
     # Guardar resultados
     resultados.append(tiempo_en_sistema)
 
@@ -58,36 +57,51 @@ def ejecutar_simulacion(num_procesos, RAM_CAPACITY, CPU_INSTRUCCIONES, num_cpus,
     env.run()
 
 def main(RAM_CAPACITY, CPU_INSTRUCCIONES, num_cpus):
-    plt.figure(figsize=(10, 6))
-    
-    for intervalo in INTERVALOS:
+    fig, axs = plt.subplots(3, figsize=(10, 18))
+    fig.suptitle('Tiempo Promedio en el Sistema vs. Número de Procesos')
+
+    for i, intervalo in enumerate(INTERVALOS):
         tiempos_promedio = []
+        desviaciones_estandar = []
         for num_proceso in NUM_PROCESOS:
             ejecutar_simulacion(num_proceso, RAM_CAPACITY, CPU_INSTRUCCIONES, num_cpus, intervalo)
             
             # Calcular promedio de tiempo
             promedio_tiempo = sum(resultados) / num_proceso
             tiempos_promedio.append(promedio_tiempo)
-        
+            
+            # Calcular desviación estándar
+            desviacion_estandar = (sum((x - promedio_tiempo) ** 2 for x in resultados) / num_proceso) ** 0.5
+            desviaciones_estandar.append(desviacion_estandar)
+            
+            print(f"Para {num_proceso} procesos con intervalo {intervalo}:")
+            print(f"Tiempo promedio en el sistema: {promedio_tiempo}")
+            print(f"Desviación estándar: {desviacion_estandar}")
+            print("-" * 30)  # Separador entre los resultados de cada configuración de la simulación
+
         # Crear DataFrame para el gráfico
-        df = pd.DataFrame(tiempos_promedio, index=NUM_PROCESOS)
+        df = pd.DataFrame({'Tiempo Promedio': tiempos_promedio, 'Desviación Estándar': desviaciones_estandar}, index=NUM_PROCESOS)
 
-        # Graficar
-        plt.plot(df, marker='o', label=f"Intervalo {intervalo}")
+        # Gráfico
+        axs[i].plot(df.index, df['Tiempo Promedio'], marker='o', label=f"Intervalo {intervalo}")
+        axs[i].fill_between(df.index, df['Tiempo Promedio'] - df['Desviación Estándar'], df['Tiempo Promedio'] + df['Desviación Estándar'], alpha=0.2)
+        axs[i].set_xlabel("Número de Procesos")
+        axs[i].set_ylabel("Tiempo Promedio en el Sistema")
+        axs[i].legend()
+        axs[i].grid(True)
 
-    plt.title("Tiempo Promedio en el Sistema vs. Número de Procesos")
-    plt.xlabel("Número de Procesos")
-    plt.ylabel("Tiempo Promedio en el Sistema")
-    plt.xticks(NUM_PROCESOS)
-    plt.legend(title="Intervalo")
-    plt.grid(True)
+    plt.tight_layout()
     plt.show()
 
 def menu():
     while True:
+        print("-"*30)
         print("Simulación de un sistema de procesos")
         print("1. Simulación con 100 de RAM, 3 instrucciones por ciclo y 1 CPU")
-        print("2. Salir")
+        print("2. Simulación con 200 de RAM, 3 instrucciones por ciclo y 1 CPU")
+        print("3. Simulación con 100 de RAM, 6 instrucciones por ciclo y 1 CPU")
+        print("4. Simulación con 100 de RAM, 3 instrucciones por ciclo y 2 CPU")
+        print("5. Salir")
         opcion = int(input("Opción: "))
         
         if opcion == 1:
@@ -96,6 +110,21 @@ def menu():
             num_cpus = 1
             main(RAM_CAPACITY, CPU_INSTRUCCIONES, num_cpus)
         elif opcion == 2:
+            RAM_CAPACITY = 200
+            CPU_INSTRUCCIONES = 3
+            num_cpus = 1
+            main(RAM_CAPACITY, CPU_INSTRUCCIONES, num_cpus)
+        elif opcion == 3:
+            RAM_CAPACITY = 100
+            CPU_INSTRUCCIONES = 6
+            num_cpus = 1
+            main(RAM_CAPACITY, CPU_INSTRUCCIONES, num_cpus)
+        elif opcion == 4:
+            RAM_CAPACITY = 100
+            CPU_INSTRUCCIONES = 3
+            num_cpus = 2
+            main(RAM_CAPACITY, CPU_INSTRUCCIONES, num_cpus)
+        elif opcion == 5:
             break
         else:
             print("Opción inválida")
